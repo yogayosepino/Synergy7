@@ -1,0 +1,49 @@
+var callbackList = {}
+// 调用客户端方法
+function wsClientFunction(request, callback) {  
+    if(isInCustomBrowser()) {
+        //存储回调函数
+        requestMapObjectFn(request.session_id, callback)
+        var requestStr = JSON.stringify(request);
+        if(window.webkit && window.webkit.messageHandlers.WSClientFunction) {
+            window.webkit.messageHandlers.WSClientFunction.postMessage(requestStr);
+        } else if (typeof filmora !== "undefined") {
+            filmora.WSClientFunction(requestStr)
+        } else if (window.external) {
+            window.external.WSClientFunction(requestStr);
+        } else if (navigator.userAgent.indexOf('Android') > -1 || navigator.userAgent.indexOf('Adr') > -1) {
+            window.WebViewJavascriptBridge.callHandler('WSClientFunction', requestStr);
+        } else if (!!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/)) {
+            window.WSClientFunction(requestStr)
+        } else {
+            throw new Error("WSClientFunction not found!");
+        }
+    } else {            
+        console.log('不在自定义浏览器中')
+    }       
+}
+// 检测是否在内嵌浏览器中访问
+function isInCustomBrowser() {        
+    if((navigator.userAgent.indexOf('Android') > -1 || navigator.userAgent.indexOf('Adr') > -1) || window.external || (window.webkit && window.webkit.messageHandlers.WSClientFunction) || (typeof filmora !== "undefined") || (!!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/))){
+        return true;
+    }
+    return false;
+}  
+// 生成唯一ID
+function uuid() {
+    var s = [];
+    var hexDigits = "0123456789abcdef";
+    for (var i = 0; i < 36; i++) {
+        s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+    }
+    s[14] = "4";  // bits 12-15 of the time_hi_and_version field to 0010
+    s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1);  // bits 6-7 of the clock_seq_hi_and_reserved to 01
+    s[8] = s[13] = s[18] = s[23] = "-";
+    
+    var uuid = s.join("");
+    return uuid;
+}    
+// 合并对象
+function extend(target, source) {   
+    for (var obj in source) {
+        target[obj] = source[obj];
